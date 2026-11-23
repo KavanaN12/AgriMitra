@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  body {
+    background-color: #faf8f5;
+    color: #241b14;
+    overflow-x: hidden;
+  }
+}
+
+/* Kannada Script & Indic Typography Safeguards */
+:lang(kn),
+.font-kannada {
+  font-family: "Noto Sans Kannada", "Nirmala UI", "Kannada Sangam MN", "Kannada MN", system-ui, sans-serif;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Prevent negative letter-spacing from causing conjunct character collisions in Kannada */
+:lang(kn) .tracking-tight,
+:lang(kn) .tracking-tighter,
+.font-kannada.tracking-tight,
+.font-kannada.tracking-tighter {
+  letter-spacing: 0.005em !important;
+}
+
+/* Vertical metrics protection: Ensure subscript otthaksharas and vowel matras are never clipped */
+:lang(kn) h1,
+:lang(kn) h2,
+:lang(kn) h3,
+:lang(kn) h4,
+:lang(kn) h5,
+:lang(kn) h6 {
+  line-height: 1.35;
+}
+
+:lang(kn) button,
+:lang(kn) nav a,
+:lang(kn) .badge {
+  line-height: 1.4;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f4ede4;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d5c2ac;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #bca184;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+html.text-size-large {
+  font-size: 112%;
+}
+
+html.text-size-small {
+  font-size: 92%;
+}
+
+body.data-saver-mode img {
+  filter: contrast(105%) brightness(95%);
+}

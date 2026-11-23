@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: agrimitra-app
+    env: docker
+    dockerfilePath: docker/Dockerfile.app
+    dockerContext: .
+    plan: starter
+    region: singapore # Closest low-latency region to Karnataka, India
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: "8000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: agrimitra-postgres
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FRONTEND_DIST_DIR
+        value: /app/static
+      - key: UPLOAD_DIR
+        value: /app/uploads
+      - key: ADMIN_INITIAL_PHONE
+        value: "9845000000"
+      - key: ADMIN_INITIAL_EMAIL
+        value: "admin@agrimitra.gov.in"
+      - key: ADMIN_INITIAL_PASSWORD
+        generateValue: true
+    disk:
+      name: uploads-data
+      mountPath: /app/uploads
+      sizeGB: 10
+
+databases:
+  - name: agrimitra-postgres
+    plan: starter
+    region: singapore
+    databaseName: agrimitra_db
+    user: postgres
