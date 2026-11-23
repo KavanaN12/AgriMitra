@@ -41,11 +41,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend source code
 COPY backend/ /app/
 
-# Copy compiled frontend from Stage 1 into /app/static
-COPY --from=frontend-builder /build/dist /app/static
+# Ensure static and upload directories exist
+RUN mkdir -p /app/static /app/uploads
 
-# Ensure upload directory exists
-RUN mkdir -p /app/uploads
+# Copy compiled frontend from Stage 1 into /app/static
+COPY --from=frontend-builder /build/dist/ /app/static/
 
 # Health check endpoint
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

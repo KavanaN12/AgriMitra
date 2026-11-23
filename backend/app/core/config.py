@@ -93,8 +93,17 @@ class Settings(BaseSettings):
     
     FRONTEND_DIST_DIR: str = os.getenv(
         "FRONTEND_DIST_DIR", 
-        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "frontend", "dist")
+        "/app/static" if os.path.isdir("/app/static") else os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "frontend", "dist")
     )
+
+    @field_validator("FRONTEND_DIST_DIR", mode="before")
+    @classmethod
+    def normalize_frontend_dist(cls, v: Optional[str]) -> str:
+        if v and isinstance(v, str) and v.strip():
+            return v.strip()
+        if os.path.isdir("/app/static"):
+            return "/app/static"
+        return os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), "frontend", "dist")
     
     UPLOAD_DIR: str = os.getenv(
         "UPLOAD_DIR",

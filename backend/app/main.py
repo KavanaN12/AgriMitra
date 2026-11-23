@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -30,6 +31,7 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     with SessionLocal() as db:
         seed_database(db)
+    print(f"INFO: Frontend dist resolved to: {frontend_dist}")
     yield
 
 # Initialize FastAPI application
@@ -75,25 +77,68 @@ os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
 # Bundled Frontend Support (Production Single-Container Mode)
-frontend_dist = settings.FRONTEND_DIST_DIR
-index_file = os.path.join(frontend_dist, "index.html")
+def resolve_frontend_dist() -> Optional[str]:
+    candidates = [
+        getattr(settings, "FRONTEND_DIST_DIR", None),
+        os.getenv("FRONTEND_DIST_DIR"),
+        "/app/static",
+        "/app/dist",
+        "/app/static/dist",
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "static"),
+        os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "frontend", "dist"),
+        os.path.join(os.getcwd(), "static"),
+        os.path.join(os.getcwd(), "frontend", "dist"),
+        os.path.join(os.getcwd(), "dist"),
+    ]
+    for candidate in candidates:
+        if candidate and os.path.isdir(candidate):
+            idx = os.path.join(candidate, "index.html")
+            if os.path.isfile(idx):
+                return os.path.abspath(candidate)
+            nested_idx = os.path.join(candidate, "dist", "index.html")
+            if os.path.isfile(nested_idx):
+                return os.path.abspath(os.path.join(candidate, "dist"))
+    return None
 
-if os.path.isdir(frontend_dist) and os.path.isfile(index_file):
-    # Mount assets folder
+frontend_dist = resolve_frontend_dist()
+
+if frontend_dist:
+    index_file = os.path.join(frontend_dist, "index.html")
+    
+    # Mount assets folder (/assets)
     assets_dir = os.path.join(frontend_dist, "assets")
     if os.path.isdir(assets_dir):
         app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
 
-    # Serve PWA / static files if requested or fallback to index.html for SPA routing
-    @app.get("/{full_path:path}")
+    # Mount images folder (/images) for crop photographs and UI assets
+    images_dir = os.path.join(frontend_dist, "images")
+    if os.path.isdir(images_dir):
+        app.mount("/images", StaticFiles(directory=images_dir), name="images")
+
+    # Explicit root route -> serves React SPA index.html
+    @app.get("/", include_in_schema=False)
+    async def serve_root():
+        return FileResponse(index_file)
+
+    # SPA catch-all route for client-side routing & root static files
+    @app.get("/{full_path:path}", include_in_schema=False)
     async def serve_spa(full_path: str):
-        # Don't intercept API or docs routes
-        if full_path.startswith("api/") or full_path in ["docs", "redoc", "openapi.json", "health"]:
+        clean_path = full_path.lstrip("/")
+        # Never intercept API, health, uploads, or docs routes
+        if (
+            clean_path.startswith("api/")
+            or clean_path == "api"
+            or clean_path.startswith("uploads/")
+            or clean_path in ["docs", "redoc", "openapi.json", "health"]
+        ):
             return RedirectResponse(url=f"{settings.API_V1_STR}/docs")
         
-        target_file = os.path.join(frontend_dist, full_path)
+        # Check if the requested file exists in frontend_dist
+        target_file = os.path.join(frontend_dist, clean_path)
         if os.path.isfile(target_file):
             return FileResponse(target_file)
+        
+        # Fall back to index.html for client-side routing
         return FileResponse(index_file)
 else:
     @app.get("/", include_in_schema=False)
