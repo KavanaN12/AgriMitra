@@ -1,4 +1,5 @@
 import os
+import json
 from typing import List, Optional, Union
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
@@ -23,7 +24,7 @@ class Settings(BaseSettings):
         return v
     
     # CORS
-    BACKEND_CORS_ORIGINS: List[str] = [
+    BACKEND_CORS_ORIGINS: Union[List[str], str] = [
         "http://localhost:5173",
         "http://localhost:3000",
         "http://localhost:8000",
@@ -31,17 +32,14 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "http://127.0.0.1:8000",
         "https://agrimitra.onrender.com",
-        "https://agrimitra-app.onrender.com"
+        "https://agrimitra-app.onrender.com",
+        "https://agrimitra-7nj1.onrender.com"
     ]
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
-        if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",") if i.strip()]
-        elif isinstance(v, list):
-            return v
-        return [
+        default_origins = [
             "http://localhost:5173",
             "http://localhost:3000",
             "http://localhost:8000",
@@ -49,8 +47,26 @@ class Settings(BaseSettings):
             "http://127.0.0.1:3000",
             "http://127.0.0.1:8000",
             "https://agrimitra.onrender.com",
-            "https://agrimitra-app.onrender.com"
+            "https://agrimitra-app.onrender.com",
+            "https://agrimitra-7nj1.onrender.com"
         ]
+        if isinstance(v, str):
+            v_clean = v.strip()
+            if not v_clean:
+                return default_origins
+            if v_clean.startswith("[") and v_clean.endswith("]"):
+                try:
+                    parsed = json.loads(v_clean)
+                    if isinstance(parsed, list):
+                        return [str(i).strip() for i in parsed if str(i).strip()]
+                except Exception:
+                    pass
+            items = [i.strip() for i in v_clean.split(",") if i.strip()]
+            return items if items else default_origins
+        elif isinstance(v, list):
+            items = [str(i).strip() for i in v if str(i).strip()]
+            return items if items else default_origins
+        return default_origins
     
     SECRET_KEY: str = os.getenv("SECRET_KEY", "agrimitra-insecure-development-secret-key-change-in-prod-2026")
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
